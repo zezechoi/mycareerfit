@@ -1302,7 +1302,14 @@ function renderJdTab(){
   }
   document.getElementById('needProfileMsg').classList.add('hidden');
   document.getElementById('jdHeader').classList.remove('hidden');
-  showJdInput();   // 열면 JD 입력창 바로
+  if (currentJdResult) {
+    // 탭 전환 후 복귀 — 마지막 결과 유지 (DOM은 살아 있음, 가시성만 복원).
+    // F5 새로고침 시엔 currentJdResult가 휘발돼 null이라 input 분기 — 자동 분석 안 함.
+    document.getElementById('jdInputArea').classList.add('hidden');
+    document.getElementById('jdResult').classList.remove('hidden');
+  } else {
+    showJdInput();
+  }
 }
 
 function renderStatusTab(){
