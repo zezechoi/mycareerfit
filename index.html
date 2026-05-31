@@ -662,26 +662,47 @@ async function fetchUrl(url){
 }
 
 function extractJson(data){
-  let text = (data?.content?.[0]?.text || '').trim();
-  text = text.replace(/```json|```/g, '').trim();
+  const rawFull = (data?.content?.[0]?.text || '').trim();
+  let text = rawFull.replace(/```json|```/g, '').trim();
   // drop any prose before the JSON object/array
   const start = text.search(/[{[]/);
   if (start > 0) text = text.slice(start);
 
   // progressively more tolerant attempts
-  const candidates = [
+  const baseCandidates = [
     text,
     // raw control chars (literal newlines/tabs inside string values break JSON.parse)
     text.replace(/[\u0000-\u001F]+/g, ' '),
     // + strip trailing commas before } or ]
     text.replace(/[\u0000-\u001F]+/g, ' ').replace(/,\s*([}\]])/g, '$1'),
   ];
-  for (const c of candidates) {
+  for (const c of baseCandidates) {
     try { return JSON.parse(c); } catch {}
-    const m = c.match(/\{[\s\S]*\}/);
-    if (m) { try { return JSON.parse(m[0]); } catch {} }
+    const mo = c.match(/\{[\s\S]*\}/); if (mo) { try { return JSON.parse(mo[0]); } catch {} }
+    const ma = c.match(/\[[\s\S]*\]/); if (ma) { try { return JSON.parse(ma[0]); } catch {} }
   }
-  throw new Error('PARSE_FAIL');
+
+  // last-resort #1: truncation — try trimming to the last balanced '}' (or ']')
+  const cleaned = text.replace(/[\u0000-\u001F]+/g, ' ').replace(/,\s*([}\]])/g, '$1');
+  const lastBrace = Math.max(cleaned.lastIndexOf('}'), cleaned.lastIndexOf(']'));
+  if (lastBrace > 0) {
+    const trimmed = cleaned.slice(0, lastBrace + 1);
+    try { return JSON.parse(trimmed); } catch {}
+  }
+
+  // last-resort #2: single-quoted JSON (모델이 큰따옴표 규칙 무시한 케이스) — risky지만 마지막 보루.
+  // 문자열 안의 따옴표가 아니라 JSON 구분자 자리(키/값 시작·끝)에 있는 작은따옴표만 큰따옴표로 교체.
+  try {
+    const swapped = cleaned
+      .replace(/([{\[,:]\s*)'/g, '$1"')   // opening of value/key
+      .replace(/'(\s*[}\],:])/g, '"$1');  // closing of value/key
+    return JSON.parse(swapped);
+  } catch {}
+
+  // give up — 다음 디버깅을 위해 raw text 통째 콘솔에 남기고, 에러 메시지엔 첫부분만
+  console.error('PARSE_FAIL — AI 응답 raw text (전체):', rawFull);
+  const snippet = rawFull.slice(0, 100).replace(/\s+/g, ' ');
+  throw new Error('PARSE_FAIL (응답 첫부분: "' + snippet + (rawFull.length > 100 ? '…' : '') + '")');
 }
 
 /* ============================================================
@@ -1055,7 +1076,8 @@ document.getElementById('onbAnalyze').addEventListener('click', async () => {
 {"summary":"한 줄 포지셔닝 20자 이내","strengths":["강점1","강점2","강점3"],"must":["Must조건1","조건2","조건3"],"keywords":["키워드1","키워드2","키워드3","키워드4","키워드5"],"goal":"커리어 목표 한 줄","criteria":{"job":{"def":"이 사람 기준 직무 적합의 의미 한 줄","basis":"직무 적합 판단 근거"},"env":{"def":"이 사람 기준 환경 적합의 의미 한 줄","basis":"환경 적합 판단 근거"},"growth":{"def":"이 사람 기준 성장 적합의 의미 한 줄","basis":"성장 적합 판단 근거"}},"appealPriority":["1순위","2순위","3순위"]}`;
     const data = await callClaude(
       [{ role: 'user', content: userText }],
-      SYSTEM_PROMPT
+      SYSTEM_PROMPT,
+      4000
     );
     const profile = deepDecode(extractJson(data));
     const cr = profile.criteria || {};
@@ -1915,7 +1937,7 @@ ${rfBlock}
 
 갭/보완 작성 규칙: "~가 부족합니다"가 아니라 "~는 이렇게 커버 가능합니다" 처럼 반드시 커버 방법 중심의 긍정 톤으로.
 
-JSON 형식 규칙: 모든 문자열 값 안에서는 큰따옴표(") 대신 작은따옴표(')를 쓰고, 줄바꿈 없이 한 줄로 작성해줘. (파싱 오류 방지)
+JSON 형식 규칙(엄수): JSON 구조에는 반드시 큰따옴표(")만 사용. 문자열 값 안에 따옴표가 필요하면 \\"로 이스케이프하거나 그냥 빼라. 값 안에 literal 줄바꿈을 쓰지 말 것(필요하면 \\n). 응답은 순수 JSON 한 덩어리만 — 앞뒤에 설명·머리말·코드블록 절대 금지.
 
 아래 형식의 JSON만 응답해줘:
 {"company":"회사명 또는 특징 한 줄","position":"포지션명",${rfJson}"criteria":[${critJson}],"brand_connection":"${CONFIG.connectionField}","risk":"이 공고 지원 시 가장 큰 리스크/주의점 한 줄","appeals":["어필1 — 내 경력 증거 포함 완성 문장 (우선순위 반영)","어필2","어필3"],"resume_guide":"이 JD에 맞춰 어떤 경험을 앞에 배치할지 한 줄. ${CONFIG.resumeGuideHint}","gaps":[{"gap":"보완할 점","strategy":"~는 이렇게 커버 가능합니다 (긍정 톤)"}]}`;
@@ -1958,7 +1980,7 @@ async function reanalyzeItem(item){
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 재분석 중...'; }
   try {
     const messages = [{ role: 'user', content: `${buildProfileText()}\n\n채용공고: ${item.jd_text}\n\n${buildJsonSchema()}` }];
-    const result = deepDecode(extractJson(await callClaude(messages, SYSTEM_PROMPT)));
+    const result = deepDecode(extractJson(await callClaude(messages, SYSTEM_PROMPT, 4000)));
     Object.assign(item, normalizeResult(result), { analyzed_at: new Date().toISOString(), draft: undefined });
     saveHistory();
     showJdResult(item);
@@ -2002,7 +2024,7 @@ document.getElementById('jdAnalyze').addEventListener('click', async () => {
   btn.innerHTML = '<span class="spinner"></span> 분석 중...';
 
   try {
-    const result = deepDecode(extractJson(await callClaude(messages, SYSTEM_PROMPT)));
+    const result = deepDecode(extractJson(await callClaude(messages, SYSTEM_PROMPT, 4000)));
     const item = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
       ...normalizeResult(result),
