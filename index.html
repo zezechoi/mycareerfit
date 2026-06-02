@@ -437,15 +437,6 @@
         <p id="resumeGuideText" class="text-[15px] leading-relaxed text-ink"></p>
       </div>
 
-      <!-- FIX PHRASES (바로 쓸 수 있는 수정 문구) -->
-      <div id="fixSection" class="card rounded-xl p-5 mb-4 hidden">
-        <h3 class="font-bold text-base mb-1">바로 쓸 수 있는 수정 문구</h3>
-        <p class="text-[11px] text-mute mb-3 leading-relaxed">위 방향대로, 복사해서 이력서에 바로 넣을 완성 문장을 만들어드려요. (내 프로필·이 JD 기반 · 없는 경력은 만들지 않아요)</p>
-        <button id="genFixBtn" class="btn-outline w-full rounded-xl py-3 font-bold">수정 문구 만들기</button>
-        <div id="fixError" class="text-sm text-point mt-2 hidden"></div>
-        <div id="fixResult" class="hidden mt-3"></div>
-      </div>
-
       <!-- APPEALS -->
       <div id="appealsCard" class="card rounded-xl p-5 mb-4">
         <div class="flex items-center justify-between mb-4">
@@ -1605,32 +1596,28 @@ function showJdResult(result, fromHistory=false){
   hint.classList.add('hidden');
 
   const draftSection = document.getElementById('draftSection');
-  const fixSection = document.getElementById('fixSection');
   if (verdict === '지원 추천') {
     appealsCard.classList.remove('hidden'); showGuide();
-    fixSection.classList.remove('hidden'); setupFixPhrasesUI(result);
     draftSection.classList.remove('hidden'); setupDraftUI(result);
     actions.appendChild(makeBtn('어필 포인트 전체 복사', 'primary', (e) => copyAll(e.currentTarget, appealsToText())));
     actions.appendChild(makeBtn('새 JD 분석하기', 'outline', resetJd));
   } else if (verdict === '검토 필요') {
     appealsCard.classList.remove('hidden'); showGuide();
-    fixSection.classList.remove('hidden'); setupFixPhrasesUI(result);
     draftSection.classList.remove('hidden'); setupDraftUI(result);
     actions.appendChild(makeBtn('어필 포인트 미리 복사해두기', 'primary', (e) => copyAll(e.currentTarget, appealsToText())));
     actions.appendChild(makeBtn('새 JD 분석하기', 'outline', resetJd));
     hint.textContent = '마음이 바뀌면 히스토리에서 다시 볼 수 있어요';
     hint.classList.remove('hidden');
   } else {
-    // 패스 — 어필/가이드/수정문구/초안 기본 숨김
+    // 패스 — 어필/가이드/초안 기본 숨김
     appealsCard.classList.add('hidden');
     guideCard.classList.add('hidden');
-    fixSection.classList.add('hidden');
     draftSection.classList.add('hidden');
     actions.appendChild(makeBtn('새 JD 분석하기', 'primary', resetJd));
     const link = document.createElement('button');
     link.className = 'btn-ghost rounded-lg px-3 py-3 text-sm underline';
     link.textContent = '그래도 지원할게요 — 어필 포인트 보기';
-    link.onclick = () => { appealsCard.classList.remove('hidden'); showGuide(); fixSection.classList.remove('hidden'); setupFixPhrasesUI(result); draftSection.classList.remove('hidden'); setupDraftUI(result); link.remove(); };
+    link.onclick = () => { appealsCard.classList.remove('hidden'); showGuide(); draftSection.classList.remove('hidden'); setupDraftUI(result); link.remove(); };
     actions.appendChild(link);
   }
 
@@ -1845,152 +1832,6 @@ function renderDraft(draft){
 }
 
 document.getElementById('genDraftBtn').addEventListener('click', () => runDraftGeneration());
-
-/* ============================================================
-   FIX PHRASES — 바로 쓸 수 있는 수정 문구 (강점 어필 / 약점 보완)
-   이력서 초안과 별개의 가벼운 호출. 환각 금지 규칙(DRAFT_SYSTEM) 적용.
-============================================================ */
-function setupFixPhrasesUI(result){
-  const btn = document.getElementById('genFixBtn');
-  const res = document.getElementById('fixResult');
-  document.getElementById('fixError').classList.add('hidden');
-  if (result.fixPhrases) {
-    res.classList.remove('hidden');
-    btn.classList.add('hidden');
-    renderFixPhrases(result.fixPhrases);
-  } else {
-    res.classList.add('hidden');
-    res.innerHTML = '';
-    btn.classList.remove('hidden');
-    btn.disabled = false;
-    btn.textContent = '수정 문구 만들기';
-  }
-}
-
-function renderFixPhrases(fp){
-  const res = document.getElementById('fixResult');
-  const all = [...((fp && fp.strength) || []), ...((fp && fp.weakness) || [])];
-  const mkList = (items, icon, color, bold) => items.map(t => `
-    <li class="flex items-start gap-2">
-      <span class="flex-shrink-0 font-bold mt-0.5" style="color:${color}">${icon}</span>
-      <div class="flex-1 min-w-0 text-sm leading-relaxed text-ink">${bold ? boldMetrics(escapeHtml(t)) : escapeHtml(t)}</div>
-      <button class="btn-outline rounded-md px-3 py-1 text-xs whitespace-nowrap flex-shrink-0">복사</button>
-    </li>`).join('');
-  let html = '';
-  if (fp && fp.strength && fp.strength.length) {
-    html += `<div class="mb-4"><div class="text-xs font-bold text-sub mb-2">강점 어필 문구</div><ul class="space-y-2.5">${mkList(fp.strength, '✓', '#2FA866', true)}</ul></div>`;
-  }
-  if (fp && fp.weakness && fp.weakness.length) {
-    html += `<div><div class="text-xs font-bold text-sub mb-2">약점 보완 문구</div><ul class="space-y-2.5">${mkList(fp.weakness, '⚠', '#E59A92', false)}</ul></div>`;
-  }
-  res.innerHTML = html || '<div class="text-sm text-mute">만들 수 있는 문구가 없어요. 프로필을 더 채우면 더 잘 만들어져요.</div>';
-  // 복사 버튼 — 렌더 순서(강점→약점)와 all 배열 순서 동일
-  res.querySelectorAll('li button').forEach((btn, i) => { btn.onclick = (e) => copyAll(e.currentTarget, all[i]); });
-  res.classList.remove('hidden');
-}
-
-function parseFixPhrases(text){
-  const slice = (start, end) => {
-    const i = text.indexOf(start);
-    if (i < 0) return '';
-    const from = i + start.length;
-    const j = text.indexOf(end, from);
-    return text.slice(from, j < 0 ? text.length : j).trim();
-  };
-  const toLines = block => block.split(/\n+/)
-    .map(l => l.replace(/^[-*•\d.\)\s]+/, '').trim())
-    .filter(l => l && !/^\(?\s*(해당\s*없음|없음|없습니다|n\/?a)\s*[.)]?\s*\)?$/i.test(l));
-  const strength = toLines(slice('###STRENGTH###', '###WEAKNESS###'));
-  const weakness = toLines(slice('###WEAKNESS###', '###END###'));
-  if (!strength.length && !weakness.length) throw new Error('수정 문구 형식을 읽지 못했어요');
-  return { strength, weakness };
-}
-
-async function generateFixPhrases(result){
-  const MAX_RESUME = 6000, MAX_JD = 2000;
-  let resumeBlob = buildResumeBlob();
-  if (resumeBlob.length > MAX_RESUME) resumeBlob = resumeBlob.slice(0, MAX_RESUME) + '\n…(이하 생략)';
-  let jdText = result.jd_text || '';
-  if (jdText.length > MAX_JD) jdText = jdText.slice(0, MAX_JD) + '…';
-
-  const reqMismatch = (result.requirement && result.requirement.level === 'mismatch')
-    ? (result.requirement.note || '내 프로필로 충족하기 어려운 필수 요건')
-    : (result.cosmetics && result.cosmetics.level === 'required' ? (result.cosmetics.note || '필수 요건') : '');
-  const gapsTxt = (result.gaps || []).map(g => g.gap).filter(Boolean).join(' / ');
-
-  const context =
-`[이 채용공고 분석]
-회사: ${result.company || ''}
-포지션: ${result.position || ''}
-평가 기준: ${(result.criteria || []).map(c => `${c.label} ${critScore(c)}점 (${c.note || ''})`).join(' / ')}
-${reqMismatch ? `충족하기 어려운 필수 요건: ${reqMismatch}` : '결격 필수 요건: 없음'}${gapsTxt ? `\n보완할 점: ${gapsTxt}` : ''}${jdText ? `\n원문 JD:\n${jdText}` : ''}`;
-
-  const prompt =
-`${context}
-
-[내 이력서 / 포트폴리오 원본]
-${resumeBlob}
-
-이 공고에 지원할 때 이력서에 '복사해서 바로 넣을' 완성 문장을 만들어줘. 두 종류:
-1) 강점 어필 문구 — 이 JD가 원하는 것과 내 이력서의 실제 경험이 만나는 지점을 1인칭 완성 문장으로. (예: "...한 경험이 있습니다")
-2) 약점 보완 문구 — 위 '충족하기 어려운 필수 요건/보완할 점'을 솔직히 인정하면서, 내 이력서에 실제로 있는 전이 가능한 경험으로 커버하는 1인칭 완성 문장. (예: "X 직접 경험은 없으나, ...로 빠르게 적응할 수 있습니다")
-
-【작성 규칙 — 거짓 경력 방지가 최우선】
-- 이력서/포트폴리오 원본에 없는 회사·업무·툴/기술명·자격증·수치·기간·프로젝트명을 절대 새로 만들지 마. JD 키워드라도 내 이력서에 근거 없으면 쓰지 마.
-- 약점 보완 문구에서, 부족한 요건을 '있다'고 하지 마. 없음을 솔직히 인정하고 진짜 전이 가능한 실제 경험으로만 커버해.
-- 근거가 부족한 문장은 만들지 말고 비워둬. 빈 게 거짓보다 낫다.
-- '충족하기 어려운 필수 요건'도 '보완할 점'도 없으면 ###WEAKNESS### 아래는 비워둬.
-
-아래 형식에 정확히 맞춰서만 (마커 라인 그대로, 마커 외 다른 말 금지):
-###STRENGTH###
-- (강점 어필 완성 문장 1)
-- (강점 어필 완성 문장 2)
-###WEAKNESS###
-- (약점 보완 완성 문장 1)
-###END###`;
-
-  const data = await callClaude([{ role: 'user', content: prompt }], DRAFT_SYSTEM, 1500);
-  const text = (data?.content?.[0]?.text || '').trim();
-  return deepDecode(parseFixPhrases(text));
-}
-
-async function runFixPhrasesGeneration(){
-  const result = currentJdResult;
-  if (!result) return;
-  if (!state.apiKey) { showKeyOverlay(); return; }
-  const btn = document.getElementById('genFixBtn');
-  const res = document.getElementById('fixResult');
-  const err = document.getElementById('fixError');
-  err.classList.add('hidden');
-  // 이력서 원본 없으면 생성 거부 — JD로 채우다 거짓 경력 들어가는 걸 막는다 (초안과 동일)
-  if (!buildResumeBlob().trim()) {
-    err.textContent = '이력서 원본을 못 찾았어요. 프로필 탭에서 이력서를 다시 저장한 뒤 시도해주세요.';
-    err.classList.remove('hidden');
-    return;
-  }
-  btn.classList.add('hidden');
-  res.classList.remove('hidden');
-  res.innerHTML = '<div class="card rounded-xl p-5 flex items-center gap-3 text-sm text-sub"><span class="spinner"></span> 수정 문구 생성 중...</div>';
-  try {
-    const fp = await generateFixPhrases(result);
-    result.fixPhrases = fp;
-    const it = state.history.find(h => h.id === result.id);
-    if (it) { it.fixPhrases = fp; saveHistory(); }
-    renderFixPhrases(fp);
-  } catch (e) {
-    console.error(e);
-    res.innerHTML = '';
-    res.classList.add('hidden');
-    btn.classList.remove('hidden');
-    const msg = e.message || '';
-    err.textContent = /rate limit|429|exceed|토큰/i.test(msg)
-      ? '분당 사용량 한도에 걸렸어요. 약 1분 뒤 다시 눌러주세요.'
-      : '수정 문구 생성 중 오류가 생겼어요. 다시 시도해주세요. (' + msg + ')';
-    err.classList.remove('hidden');
-  }
-}
-
-document.getElementById('genFixBtn').addEventListener('click', () => runFixPhrasesGeneration());
 
 function resetJd(){
   state.jdImageData = null;
