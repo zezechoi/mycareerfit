@@ -355,14 +355,11 @@
 
       <div id="jdPane_image">
         <label id="jdDrop" class="drop-zone block rounded-xl py-12 px-6 text-center cursor-pointer">
-          <div class="text-base font-bold mb-2">캡처해서 <span class="text-point">Ctrl+V</span> 붙여넣기 · 끌어다 놓기 · 클릭</div>
-          <div class="text-xs text-mute leading-relaxed">잡코리아처럼 복사가 안 되는 공고도 캡처(Win+Shift+S / ⌘⇧4)해서 바로 붙여넣으면 분석됩니다<br/>JPG · PNG · WEBP · GIF</div>
-          <input id="jdFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" />
+          <div class="text-base font-bold mb-2">캡처해서 <span class="text-point">Ctrl+V</span> 붙여넣기 · 끌어다 놓기 · 클릭 <span class="text-point">(여러 장 가능)</span></div>
+          <div class="text-xs text-mute leading-relaxed">잡코리아처럼 복사가 안 되는 공고도 캡처(Win+Shift+S / ⌘⇧4)해서 붙여넣으면 분석됩니다<br/>긴 공고는 여러 장으로 나눠 올리면 한 공고로 합쳐 분석돼요 · JPG · PNG · WEBP · GIF</div>
+          <input id="jdFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple class="hidden" />
         </label>
-        <div id="jdPreview" class="mt-3 hidden">
-          <img id="jdPreviewImg" class="max-h-64 rounded-lg border border-border" alt="JD preview" />
-          <button id="jdPreviewClear" class="text-xs text-mute hover:text-ink mt-2">이미지 제거</button>
-        </div>
+        <div id="jdImageList" class="mt-3 hidden"></div>
       </div>
 
       <div id="jdPane_text" class="hidden">
@@ -546,8 +543,7 @@ let state = {
   resumeFiles: [],    // [{ name, text }]
   resumeLinks: [],    // [{ url, text }]
   jdMode: 'image',
-  jdImageData: null,
-  jdImageMediaType: null,
+  jdImages: [],       // [{ data(base64), mediaType, dataUrl }] — 올린 순서 유지(여러 장을 한 공고로)
   jdLoading: false,
   onbLoading: false,
 };
@@ -1916,11 +1912,9 @@ function renderDraft(draft){
 document.getElementById('genDraftBtn').addEventListener('click', () => runDraftGeneration());
 
 function resetJd(){
-  state.jdImageData = null;
-  state.jdImageMediaType = null;
+  state.jdImages = [];
   document.getElementById('jdText').value = '';
-  document.getElementById('jdPreview').classList.add('hidden');
-  document.getElementById('jdPreviewImg').src = '';
+  renderJdImageList();
   document.getElementById('jdFile').value = '';
   currentJdResult = null;
   showJdInput();
@@ -1948,16 +1942,14 @@ const jdFile = document.getElementById('jdFile');
 ['dragenter','dragover'].forEach(ev => jdDrop.addEventListener(ev, (e) => { e.preventDefault(); jdDrop.classList.add('drag'); }));
 ['dragleave','drop'].forEach(ev => jdDrop.addEventListener(ev, (e) => { e.preventDefault(); jdDrop.classList.remove('drag'); }));
 jdDrop.addEventListener('drop', (e) => {
-  const f = e.dataTransfer.files?.[0];
-  if (f) handleJdImage(f);
+  if (e.dataTransfer.files?.length) handleJdImages(e.dataTransfer.files);
 });
 jdFile.addEventListener('change', (e) => {
-  const f = e.target.files?.[0];
-  if (f) handleJdImage(f);
+  if (e.target.files?.length) handleJdImages(e.target.files);
+  e.target.value = '';   // 같은 파일 다시 선택해도 change 발생하도록 초기화
 });
-document.getElementById('jdPreviewClear').addEventListener('click', resetJd);
 
-// 캡처 후 Ctrl+V로 바로 붙여넣기 — 공고 판단 입력 화면에서 클립보드 이미지 처리
+// 캡처 후 Ctrl+V로 바로 붙여넣기 — 공고 판단 입력 화면에서 클립보드 이미지 처리(한 장씩 누적)
 document.addEventListener('paste', (e) => {
   if (state.tab !== 1) return;                                              // 공고 판단 탭에서만
   if (document.getElementById('jdInputArea').classList.contains('hidden')) return; // 결과 화면이면 무시
@@ -1968,26 +1960,66 @@ document.addEventListener('paste', (e) => {
       if (f) {
         e.preventDefault();
         if (state.jdMode !== 'image') switchJdMode('image');  // 텍스트 모드였으면 이미지로 전환
-        handleJdImage(f);
+        handleJdImages([f]);
       }
       return;
     }
   }
 });
 
-async function handleJdImage(f){
+const JD_IMG_MAX = 6;
+
+// 여러 이미지를 기존 목록에 누적 추가 (상한 JD_IMG_MAX장, 올린 순서 유지)
+async function handleJdImages(files){
   const ok = ['image/jpeg','image/png','image/webp','image/gif'];
-  if (!ok.includes(f.type)) { alert('지원 형식: JPG/PNG/WEBP/GIF'); return; }
-  try {
-    const { dataUrl, mediaType } = await resizeImageIfNeeded(f, 1568);
-    state.jdImageMediaType = mediaType;
-    state.jdImageData = String(dataUrl).split(',')[1] || '';
-    document.getElementById('jdPreviewImg').src = dataUrl;
-    document.getElementById('jdPreview').classList.remove('hidden');
-  } catch (e) {
-    console.error(e);
-    alert('이미지 처리에 실패했어요. 다른 이미지로 시도해주세요.');
+  const arr = Array.from(files || []).filter(f => ok.includes(f.type));
+  if (!arr.length) { renderJdImageList('JPG·PNG·WEBP·GIF 이미지만 올릴 수 있어요.'); return; }
+  const room = JD_IMG_MAX - state.jdImages.length;
+  if (room <= 0) { renderJdImageList(`이미지는 최대 ${JD_IMG_MAX}장까지예요.`); return; }
+  const toAdd = arr.slice(0, room);
+  const dropped = arr.length - toAdd.length;
+  let failed = 0;
+  for (const f of toAdd) {
+    try {
+      const { dataUrl, mediaType } = await resizeImageIfNeeded(f, 1568);
+      state.jdImages.push({ data: String(dataUrl).split(',')[1] || '', mediaType, dataUrl });
+    } catch (e) { console.error(e); failed++; }
   }
+  let note = '';
+  if (dropped > 0) note = `최대 ${JD_IMG_MAX}장까지라 ${dropped}장은 추가하지 않았어요.`;
+  if (failed > 0) note = (note ? note + ' ' : '') + `${failed}장은 처리에 실패했어요.`;
+  renderJdImageList(note);
+}
+
+// 올린 이미지 썸네일 목록 — 순번·개별 삭제·개수 표시
+function renderJdImageList(note){
+  const box = document.getElementById('jdImageList');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!state.jdImages.length) {
+    if (note) { box.classList.remove('hidden'); box.innerHTML = `<div class="text-[11px] text-point">${escapeHtml(note)}</div>`; }
+    else box.classList.add('hidden');
+    return;
+  }
+  box.classList.remove('hidden');
+  const head = document.createElement('div');
+  head.className = 'text-[11px] text-mute mb-2';
+  head.innerHTML = `이미지 <b>${state.jdImages.length}/${JD_IMG_MAX}</b>장 · 위→아래 순서로 한 공고로 분석돼요` + (note ? ` <span class="text-point">— ${escapeHtml(note)}</span>` : '');
+  box.appendChild(head);
+  const grid = document.createElement('div');
+  grid.className = 'flex flex-wrap gap-2';
+  state.jdImages.forEach((im, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'relative';
+    cell.innerHTML = `
+      <img src="${im.dataUrl}" class="h-24 w-auto rounded-lg border border-border" alt="JD ${i+1}" />
+      <span class="absolute top-1 left-1 bg-ink text-bg text-[10px] font-bold rounded px-1.5 py-0.5">${i+1}</span>
+      <button type="button" class="absolute top-1 right-1 bg-ink text-bg rounded-full w-5 h-5 text-xs leading-none flex items-center justify-center" title="제거">×</button>
+    `;
+    cell.querySelector('button').onclick = () => { state.jdImages.splice(i, 1); renderJdImageList(); };
+    grid.appendChild(cell);
+  });
+  box.appendChild(grid);
 }
 
 function resizeImageIfNeeded(file, maxDim){
@@ -2150,15 +2182,13 @@ document.getElementById('jdAnalyze').addEventListener('click', async () => {
 
   let messages;
   if (state.jdMode === 'image') {
-    if (!state.jdImageData) { err.textContent = 'JD 이미지를 업로드해주세요.'; err.classList.remove('hidden'); return; }
-    const textPart = `${profileText}\n\n이 채용공고 이미지를 분석해서 ${jsonSchema}`;
-    messages = [{
-      role: 'user',
-      content: [
-        { type: 'image', source: { type: 'base64', media_type: state.jdImageMediaType, data: state.jdImageData } },
-        { type: 'text', text: textPart },
-      ],
-    }];
+    if (!state.jdImages.length) { err.textContent = 'JD 이미지를 업로드해주세요.'; err.classList.remove('hidden'); return; }
+    const many = state.jdImages.length > 1;
+    const textPart = `${profileText}\n\n${many ? `위 이미지 ${state.jdImages.length}장은 하나의 채용공고를 위→아래 순서로 나눠 캡처한 것이다. 모두 순서대로 이어붙여 하나의 공고로 보고 분석해서` : '이 채용공고 이미지를 분석해서'} ${jsonSchema}`;
+    // 이미지들을 올린 순서대로 먼저, 그다음 텍스트 지시
+    const content = state.jdImages.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.mediaType, data: im.data } }));
+    content.push({ type: 'text', text: textPart });
+    messages = [{ role: 'user', content }];
   } else {
     const jd = document.getElementById('jdText').value.trim();
     if (!jd) { err.textContent = 'JD 텍스트를 붙여넣어주세요.'; err.classList.remove('hidden'); return; }
