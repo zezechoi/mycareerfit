@@ -148,12 +148,13 @@
 <div id="apiKeyOverlay" class="fixed inset-0 z-50 bg-bg flex items-center justify-center px-4 hidden">
   <div class="w-full max-w-md card rounded-2xl p-7">
     <div class="text-xs tracking-widest text-mute mb-2">CAREER · FIT · OS</div>
-    <h2 class="text-2xl font-bold mb-2">접속 비밀번호</h2>
+    <h2 class="text-2xl font-bold mb-2">본인 Anthropic API 키</h2>
     <p class="text-sm text-sub leading-relaxed mb-5">
-      관리자에게 받은 비밀번호를 입력해주세요.<br/>
-      비밀번호는 이 브라우저에만 저장됩니다.
+      본인 Anthropic API 키를 입력하면, 그 키로 분석이 돌아가요(사용량은 본인 계정에 청구돼요).<br/>
+      키는 이 브라우저에만 저장됩니다. 공용 PC라면 사용 후 지워주세요.<br/>
+      키 발급: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" class="text-point underline">console.anthropic.com</a>
     </p>
-    <input id="apiKeyInput" type="password" placeholder="비밀번호" class="w-full rounded-lg px-4 py-3 text-sm mb-3" autocomplete="off" />
+    <input id="apiKeyInput" type="password" placeholder="sk-ant-..." class="w-full rounded-lg px-4 py-3 text-sm mb-3" autocomplete="off" />
     <div id="apiKeyError" class="text-xs text-point mb-3 hidden"></div>
     <button id="apiKeySave" class="btn-primary w-full rounded-lg py-3 font-semibold">저장하고 시작</button>
   </div>
@@ -507,7 +508,7 @@
    STATE
 ============================================================ */
 const STORE = {
-  KEY: 'careerfit_password',
+  KEY: 'careerfit_apikey',       // 본인 Anthropic API 키 (옛 careerfit_password는 로드 시 폐기)
   PROFILE: 'careerfit_profile',
   HISTORY: 'careerfit_history',
 };
@@ -555,7 +556,11 @@ let state = {
    STORAGE HELPERS
 ============================================================ */
 function loadAll(){
-  state.apiKey  = localStorage.getItem(STORE.KEY);
+  // 마이그레이션: 옛 공유 비밀번호 슬롯은 폐기 (키 자리에 비번이 잘못 들어가는 사고 방지)
+  localStorage.removeItem('careerfit_password');
+  const savedKey = localStorage.getItem(STORE.KEY);
+  // 저장된 값이 키 형식(sk-ant-)일 때만 인정 — 아니면 없는 것으로 보고 입력 받음
+  state.apiKey = (savedKey && savedKey.startsWith('sk-ant-')) ? savedKey : null;
   try { state.profile = deepDecode(JSON.parse(localStorage.getItem(STORE.PROFILE) || 'null')); } catch { state.profile = null; }
   try { state.history = deepDecode(JSON.parse(localStorage.getItem(STORE.HISTORY) || '[]')); } catch { state.history = []; }
 }
@@ -637,22 +642,20 @@ function refreshUI(){
    API CLIENT (via Vercel serverless proxy)
 ============================================================ */
 async function callServer(path, body){
-  if (!state.apiKey) throw new Error('NO_PASSWORD');
+  if (!state.apiKey) throw new Error('NO_KEY');
   const res = await fetch(path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-app-password': state.apiKey,
+      'x-anthropic-key': state.apiKey,
     },
     body: JSON.stringify(body),
   });
   if (res.status === 401) {
     localStorage.removeItem(STORE.KEY);
     state.apiKey = null;
-    const j = await res.json().catch(() => ({}));
-    const msg = j?.error?.message || '비밀번호가 올바르지 않아요.';
-    showKeyOverlay(msg);
-    throw new Error(msg);
+    showKeyOverlay('API 키가 올바르지 않아요. console.anthropic.com에서 키를 확인해 다시 입력해주세요.');
+    throw new Error('INVALID_KEY');
   }
   let data = null;
   try { data = await res.json(); } catch { /* ignore */ }
@@ -825,7 +828,12 @@ document.getElementById('apiKeySave').addEventListener('click', () => {
   const v = document.getElementById('apiKeyInput').value.trim();
   const err = document.getElementById('apiKeyError');
   if (!v) {
-    err.textContent = '비밀번호를 입력해주세요.';
+    err.textContent = 'API 키를 입력해주세요.';
+    err.classList.remove('hidden');
+    return;
+  }
+  if (!v.startsWith('sk-ant-')) {
+    err.textContent = "Anthropic API 키 형식이 아니에요. 'sk-ant-'로 시작하는 키를 넣어주세요.";
     err.classList.remove('hidden');
     return;
   }
@@ -833,7 +841,7 @@ document.getElementById('apiKeySave').addEventListener('click', () => {
   state.apiKey = v;
   localStorage.setItem(STORE.KEY, v);
   hideKeyOverlay();
-  syncFromServer();   // 비밀번호 입력 직후 클라우드 데이터 동기화
+  syncFromServer();   // 키 입력 직후 동기화 시도 (CLOUD_SYNC=false면 no-op)
 });
 document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('apiKeySave').click();
