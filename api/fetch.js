@@ -54,13 +54,23 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: { message: 'Method not allowed' } });
   }
 
-  const expected = (process.env.APP_PASSWORD || '').trim();
-  const provided = (req.headers['x-app-password'] || '').trim();
-  if (!expected) {
-    return res.status(500).json({ error: { message: '서버 설정 오류: APP_PASSWORD 환경변수가 등록되지 않았어요.' } });
-  }
-  if (!provided || provided !== expected) {
-    return res.status(401).json({ error: { message: '비밀번호가 올바르지 않아요.' } });
+  // 각자 키 모드: 본인 Anthropic 키 헤더가 있으면 형식만 확인하고 통과
+  // (이 엔드포인트는 Anthropic을 호출하지 않고 공개 URL 텍스트만 가져옴 — SSRF 보호는 아래 assertPublicHost가 담당)
+  // (레거시 폴백: 키가 없으면 기존 비번 게이트)
+  const userKey = (req.headers['x-anthropic-key'] || '').trim();
+  if (userKey) {
+    if (!userKey.startsWith('sk-ant-')) {
+      return res.status(401).json({ error: { message: 'API 키 형식이 올바르지 않아요.' } });
+    }
+  } else {
+    const expected = (process.env.APP_PASSWORD || '').trim();
+    const provided = (req.headers['x-app-password'] || '').trim();
+    if (!expected) {
+      return res.status(500).json({ error: { message: '서버 설정 오류: APP_PASSWORD 환경변수가 등록되지 않았어요.' } });
+    }
+    if (!provided || provided !== expected) {
+      return res.status(401).json({ error: { message: '비밀번호가 올바르지 않아요.' } });
+    }
   }
 
   const { url } = req.body || {};
