@@ -598,8 +598,8 @@ function saveHistoryItem(item){
 /* ============================================================
    CLOUD SYNC (Upstash/Vercel KV via /api/data) — 기기 간 동일 데이터
 ============================================================ */
-// 테스터 데이터 분리: 클라우드 동기화 OFF — 각 브라우저는 자기 localStorage만 사용.
-// (단일 공유 비밀번호 환경에선 동기화를 켜면 모든 사용자가 같은 데이터를 공유·덮어쓰게 됨)
+// 데이터 분리: 클라우드 동기화 OFF — 각 브라우저는 자기 localStorage만 사용.
+// (KV는 단일 키를 공유하는 구조라 켜면 사용자 데이터가 섞임 — 각자 키 모드에서도 그대로 OFF 유지)
 const CLOUD_SYNC = false;
 let _syncTimer = null;
 function syncToServer(){

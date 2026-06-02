@@ -132,15 +132,15 @@ JD 입력 → 기준 체크 → 필수 요건 감지 → 판정 → 어필 → �
 ## 기술 스택
 
 - 단일 HTML + Vanilla JS + Tailwind CDN
-- Claude API (claude-sonnet-4-5) — **서버리스 프록시(`/api/claude`)를 통해서만** 호출. Anthropic 키는 서버 환경변수(`ANTHROPIC_API_KEY`)에만 존재, 프론트/브라우저에 절대 노출 안 됨
-- 사용자 인증: 공유 비밀번호(`x-app-password` 헤더 → 서버 `APP_PASSWORD` 검증). 사용자는 키가 아니라 비밀번호만 입력
+- Claude API (claude-sonnet-4-5) — **서버리스 프록시(`/api/claude`)를 통해서만** 호출
+- **각자 키 방식**: 사용자가 본인 Anthropic API 키(`sk-ant-...`)를 입력 → `x-anthropic-key` 헤더로 전송 → 프록시가 그 키로 Anthropic 호출. 사용량은 본인 계정에 청구. (오너 공유키·비밀번호 게이트 없음 — 키가 곧 게이트). 키는 절대 로깅하지 않음
 - localStorage 데이터 유지 (브라우저별 분리, 클라우드 동기화 off)
 - 폰트 Pretendard
 - **다크모드** (베이지 톤에서 판정 배지 구분이 약해 전환)
 
 ### localStorage 구조
 ```
-careerfit_password  → 앱 접근용 공유 비밀번호 (Anthropic 키 아님)
+careerfit_apikey    → 본인 Anthropic API 키 (sk-ant-..., 이 브라우저에만)
 careerfit_profile   → { reason, resume_raw, resume_sources, summary, goal,
                         strengths[], must[], keywords[],
                         criteria[{key, def, basis}],   // 3축 개인화 정의
