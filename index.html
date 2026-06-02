@@ -1703,27 +1703,36 @@ async function generateResumeDraft(result){
 [내 이력서 / 포트폴리오 원본]
 ${resumeBlob}
 
-위 채용공고와 내 이력서를 바탕으로, 이 공고에 바로 제출할 이력서 초안을 작성해줘. ${CONFIG.resumeGuideHint}
+위 채용공고와 내 이력서를 바탕으로, 이 공고에 **복사해서 바로 제출할 수 있는 완성 수준**의 이력서 초안을 작성해줘. 참고용이 아니라, 사용자가 손대지 않고 그대로 낼 수 있어야 해. ${CONFIG.resumeGuideHint}
 
 【작성 규칙 — 거짓 경력 방지가 최우선】
 1. 이력서/포트폴리오 원본에 명시되지 않은 회사·업무·툴/기술명·자격증·수치·기간·프로젝트명·직책을 새로 만들어내지 마. JD에 있는 키워드라도 내 이력서에 근거가 없으면 쓰지 마.
 2. 'JD 언어 반영'의 의미: *내가 실제로 한 경험을 JD의 표현·키워드로 재기술하는 것*이지, *JD에 적힌 경험을 내가 한 것처럼 채우는 것이 아니다.* 예) JD에 "X 툴 사용 우대"가 있고 내 이력서에 X가 없으면 → X를 절대 언급하지 마. 반대로 내가 한 "데이터 전처리"를 JD가 "데이터 파이프라인 구축"이라 부른다면, 정확한 사실 범위 안에서 그 표현을 빌려쓰는 건 OK.
 3. 매칭되는 경험이 부족하면 일반적·추상적 표현을 쓰거나 그 자리를 비워둬. 빈 것이 거짓보다 낫다.
 4. 핵심 경력은 보통 3개지만, 이력서에서 이 JD와 진짜로 매칭되는 경험이 3개 미만이면 **2개나 1개로 줄여도 OK**. 빈자리를 채우려고 지어내지 마.
-5. 자기소개·핵심 경력·지원 동기 **세 섹션 전부**에 위 1~4번이 동일하게 적용. 지원 동기는 특히 회사·제품·산업에 대한 구체 사실(매출·점유율·창업 연도·특정 캠페인 등)을 모르면 쓰지 마.${CONFIG.draft.forbiddenWord ? `\n6. 지원 동기를 포함한 모든 문구에서 '${CONFIG.draft.forbiddenWord}' 언급 금지. 대신 "${CONFIG.draft.positiveDirection}"는 방향으로만 작성.` : ''}
+5. 자기소개·핵심 경력·지원 동기 **세 섹션 전부**에 위 1~4번이 동일하게 적용. 지원 동기는 특히 회사·제품·산업에 대한 구체 사실(매출·점유율·창업 연도·특정 캠페인 등)을 모르면 쓰지 마.
+6. **분량을 늘리려고 없는 내용을 채우지 마.** 분량과 정직함이 충돌하면 정직함이 우선이다. 길이는 실제 근거가 있는 만큼만. (지원 동기를 길게 쓰라고 해서 없는 경험·구체 사실을 지어내는 건 절대 금지)${CONFIG.draft.forbiddenWord ? `\n7. 지원 동기를 포함한 모든 문구에서 '${CONFIG.draft.forbiddenWord}' 언급 금지. 대신 "${CONFIG.draft.positiveDirection}"는 방향으로만 작성.` : ''}
+
+【완성도 — 그대로 제출 가능한 수준】
+- 모든 문장은 완결된 한국어 지원서 문체로. 메모·키워드 나열·말줄임 금지.
+
+【구체성 — 두루뭉술 금지, 단 사실 범위 내】
+- 이력서/포트폴리오 원본에 이미 있는 구체적 사실(거래선·국가 수, 담당 역할, 계약·매출 규모, 프로젝트명, 기간, 성과 수치)을 **적극적으로 끌어다 써라.** 프로필에 구체 정보가 있는데도 "총괄했습니다 / 담당했습니다"로 뭉뚱그리지 마.
+- 각 경력은 '무엇을 · 어떻게 · 어떤 결과로'가 드러나게.
+- ★ 단, 구체성은 '이미 있는 사실을 끌어오는 것'이지 '없는 걸 만드는 것'이 아니다. 원본에 없는 숫자·성과·거래처·고객사를 절대 지어내지 마. 구체적으로 쓸 근거가 없으면 있는 사실 범위에서만 담백하게.
 
 아래 형식에 정확히 맞춰 작성해줘 (마커 라인 그대로 포함, 마커 외 다른 말 금지):
 ###INTRO###
-(자기소개 첫 줄 한 문장 — 이력서 사실 범위 안에서)
+(자기소개 2~3문장. 첫 문장은 직무·정체성을 간결하게 한 문장으로 — 한 문장에 다 욱여넣지 말 것. 이어지는 1~2문장에서 핵심 강점·경험을 풀어서 자연스럽게.)
 ###HIGHLIGHTS###
-- (핵심 경력1 — 이력서에 있는 경험을 JD 언어로 재기술)
+- (핵심 경력1 — 이력서에 있는 경험을 '그대로 이력서에 넣을 수 있는' 완성 문장으로. 원본에 있는 구체적 숫자·역할·맥락을 끌어와 '무엇을·어떻게·어떤 결과로'가 드러나게. JD 언어로 재작성. 없는 수치는 만들지 말 것.)
 - (핵심 경력2 — 같은 규칙. 매칭이 1개뿐이면 이 줄과 다음 줄은 생략)
 - (핵심 경력3 — 같은 규칙. 매칭이 2개뿐이면 이 줄 생략)
 ###MOTIVATION###
-(이 회사+직무에 맞는 지원 동기 한 단락 3~4문장. 회사 구체 사실을 모르면 일반적 표현으로)
+(지원 동기 3~5문장. '글로벌 확장에 공감합니다' 같은 일반론·상투구 금지 — 누구나 쓸 수 있는 문장 말고, '내 경험이 있어야만 쓸 수 있는' 문장으로. 내 이력서의 구체적 경험(특정 역할·프로젝트·성과)을 근거로 ① 이 직무에 왜 지원하는지 ② 내 경험이 이 직무와 어떻게 연결되는지 ③ 입사 후 어떻게 기여할지를 풀어라. 회사 구체 사실을 모르면 지어내지 말고 직무·내 경험 중심으로.)
 ###END###`;
 
-  const data = await callClaude([{ role: 'user', content: prompt }], DRAFT_SYSTEM, 3000);
+  const data = await callClaude([{ role: 'user', content: prompt }], DRAFT_SYSTEM, 4000);
   const text = (data?.content?.[0]?.text || '').trim();
   return deepDecode(parseDraftText(text));
 }
@@ -1791,10 +1800,11 @@ function renderDraft(draft){
   const card = document.createElement('div');
   card.className = 'card rounded-xl p-5';
   card.innerHTML = `
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-2">
       <h3 class="font-bold text-base">이 JD용 이력서 초안</h3>
       <button id="draftRegen" class="text-xs text-mute hover:text-ink">다시 생성</button>
     </div>
+    <p class="text-xs text-mute leading-relaxed mb-4">💡 AI가 만든 초안이에요. 그대로 쓰기보다 본인 경험과 말투로 다듬어 쓰는 걸 추천해요.</p>
     <div id="draftSections" class="space-y-5"></div>
     <button id="draftCopyAll" class="btn-primary w-full rounded-lg py-3 font-semibold text-sm mt-5">전체 복사</button>
   `;
@@ -1814,11 +1824,12 @@ function renderDraft(draft){
     sec.appendChild(div);
   }
 
-  addSection('① 자기소개 첫 줄', escapeHtml(draft.intro || ''), draft.intro || '');
+  const nl2br = s => escapeHtml(s).replace(/\n+/g, '<br>');
+  addSection('① 자기소개', nl2br(draft.intro || ''), draft.intro || '');
   const hl = draft.highlights || [];
   const hlHtml = '<ol class="list-decimal list-inside space-y-1.5">' + hl.map(h => `<li>${escapeHtml(h)}</li>`).join('') + '</ol>';
-  addSection('② 핵심 경력 3줄 (JD 언어로 재배치)', hlHtml, hl.map((h, i) => `${i+1}. ${h}`).join('\n'));
-  addSection('③ 지원 동기', escapeHtml(draft.motivation || ''), draft.motivation || '');
+  addSection('② 핵심 경력 (JD 언어로 재작성)', hlHtml, hl.map((h, i) => `${i+1}. ${h}`).join('\n'));
+  addSection('③ 지원 동기', nl2br(draft.motivation || ''), draft.motivation || '');
 
   // full draft text for "전체 복사"
   const fullText = [
