@@ -651,17 +651,27 @@ async function callServer(path, body){
     },
     body: JSON.stringify(body),
   });
-  if (res.status === 401) {
+  let data = null;
+  try { data = await res.json(); } catch { /* ignore */ }
+
+  // 잘못된 키 → 키 삭제 후 재입력 유도 (키 자체가 틀림)
+  if (res.status === 401 || res.status === 403) {
     localStorage.removeItem(STORE.KEY);
     state.apiKey = null;
     showKeyOverlay('API 키가 올바르지 않아요. console.anthropic.com에서 키를 확인해 다시 입력해주세요.');
     throw new Error('INVALID_KEY');
   }
-  let data = null;
-  try { data = await res.json(); } catch { /* ignore */ }
   if (!res.ok) {
-    const errMsg = data?.error?.message || ('HTTP ' + res.status);
-    throw new Error(errMsg);
+    const raw = data?.error?.message || ('HTTP ' + res.status);
+    // 크레딧/결제 부족 → 키는 유효하므로 지우지 않고 안내만
+    if (/credit|billing|quota|insufficient/i.test(raw)) {
+      throw new Error('Anthropic 크레딧/결제를 확인해주세요 — 계정에 사용 가능한 크레딧이 부족할 수 있어요.');
+    }
+    // 사용량 한도 → 키 유지, 잠시 후 재시도 안내
+    if (res.status === 429) {
+      throw new Error('사용량 한도에 걸렸어요(429). 잠시 후 다시 시도해주세요. Anthropic 계정의 rate limit도 확인해보세요.');
+    }
+    throw new Error(raw);
   }
   return data;
 }
