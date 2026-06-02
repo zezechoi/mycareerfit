@@ -379,47 +379,57 @@
         <button id="reanalyzeBtn" class="text-sm text-mute hover:text-ink whitespace-nowrap">↻ 새 기준으로 재분석</button>
       </div>
 
-      <!-- FIT SUMMARY (hero) -->
-      <div id="fitSummary" class="card rounded-2xl p-6 mb-4">
-        <div class="text-xs tracking-widest text-mute mb-4">FIT SUMMARY</div>
-        <div class="flex items-center gap-5">
-          <div class="text-center flex-shrink-0">
-            <div id="fitScoreBig" class="text-5xl font-black leading-none"></div>
-            <div class="text-[10px] tracking-widest text-mute mt-1">FIT</div>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span id="verdictLabel" class="pill text-sm"></span>
-              <span id="notRecTag" class="pill text-xs hidden" style="background:#3A1E1E;color:#E59A92;border:1px solid #6B3A3A">지원 비추천</span>
-            </div>
-            <div id="verdictCompany" class="text-sm font-semibold text-sub mt-2"></div>
-            <div id="fitRationale" class="text-[13px] text-mute mt-1"></div>
-          </div>
+      <!-- QUICK SUMMARY (메인 요약: 점수·판정·결론·강점·걸리는점) -->
+      <div id="quickSummary" class="card rounded-2xl p-6 mb-4">
+        <!-- 1. 회사·직무 (맥락, 작게 위) -->
+        <div class="text-[11px] tracking-widest text-mute mb-1">한눈에 보기</div>
+        <div id="qsCompany" class="text-sm font-semibold text-sub mb-3"></div>
+        <!-- 2. 점수·판정 (가장 크게) -->
+        <div class="flex items-center gap-2 flex-wrap mb-2">
+          <span id="qsVerdict" class="text-4xl md:text-5xl font-black leading-none tracking-tight"></span>
+          <span id="qsNotRec" class="pill text-xs hidden" style="background:#3A1E1E;color:#E59A92;border:1px solid #6B3A3A">지원 비추천</span>
         </div>
-        <div id="verdictMissing" class="text-sm mt-3 hidden leading-relaxed"></div>
-        <div class="text-sm mt-4 pt-3" style="border-top:1px solid #3F4552">
-          <span class="text-mute">리스크 · </span><span id="fitRisk" class="text-sub"></span>
+        <!-- 3. 한 문장 결론 (중간 크기) -->
+        <div id="qsConclusion" class="text-[17px] leading-relaxed text-ink"></div>
+        <!-- 4. 강점 / 걸리는 점 (여백 후 구분, 보조 톤) -->
+        <div class="space-y-2 mt-5 pt-4" style="border-top:1px solid #3F4552">
+          <div id="qsStrengthRow" class="flex items-start gap-2 text-sm leading-relaxed text-sub">
+            <span class="flex-shrink-0 font-bold" style="color:#2FA866">✓</span>
+            <span id="qsStrength" class="flex-1 min-w-0"></span>
+          </div>
+          <div id="qsRiskRow" class="flex items-start gap-2 text-sm leading-relaxed text-sub">
+            <span class="flex-shrink-0 font-bold" style="color:#E59A92">⚠</span>
+            <span id="qsRisk" class="flex-1 min-w-0"></span>
+          </div>
         </div>
       </div>
 
-      <!-- COSMETICS 1ST-PASS FILTER FLAG -->
+      <!-- 필수요건 1차 필터 배지 -->
       <div id="requirementFlag" class="rounded-xl px-5 py-3.5 mb-4 text-sm font-semibold leading-relaxed hidden"></div>
-
-      <!-- BRAND CONNECTION (always shown) -->
-      <div id="brandConnectionCard" class="card-brand rounded-xl p-5 mb-4">
-        <div id="brandConnectionQuestion" class="text-sm font-bold mb-1.5">이 공고, 브랜드 전체 흐름을 직접 경험할 수 있나요?</div>
-        <div class="text-[15px] text-sub leading-relaxed">→ <span id="brandConnectionText"></span></div>
-      </div>
-
-      <!-- 4 CRITERIA CHECKLIST -->
-      <div id="criteriaCard" class="card rounded-xl p-5 mb-4">
-        <h3 id="criteriaHeading" class="font-bold text-base mb-3">핵심 기준 체크</h3>
-        <ul id="criteriaList" class="space-y-2.5"></ul>
-      </div>
 
       <!-- ACTION BUTTONS -->
       <div id="actionRow" class="flex flex-wrap gap-3 mb-2"></div>
-      <div id="actionHint" class="text-xs text-mute mb-7 hidden"></div>
+      <div id="actionHint" class="text-xs text-mute mb-4 hidden"></div>
+
+      <!-- 상세 (기본 접힘): 핵심 기준 체크 + 커리어 목표 연결 -->
+      <details id="jdDetails" class="mb-4 group">
+        <summary class="cursor-pointer text-sm font-semibold text-sub hover:text-ink py-2 flex items-center gap-1.5 select-none">
+          <span class="inline-block transition-transform group-open:rotate-90 text-xs">▶</span>
+          <span>자세히 보기 — 핵심 기준 · 목표 연결</span>
+        </summary>
+        <div class="mt-3">
+          <!-- CRITERIA CHECKLIST -->
+          <div id="criteriaCard" class="card rounded-xl p-5 mb-4">
+            <h3 id="criteriaHeading" class="font-bold text-base mb-3">핵심 기준 체크</h3>
+            <ul id="criteriaList" class="space-y-2.5"></ul>
+          </div>
+          <!-- BRAND CONNECTION -->
+          <div id="brandConnectionCard" class="card-brand rounded-xl p-5 mb-0">
+            <div id="brandConnectionQuestion" class="text-sm font-bold mb-1.5">이 공고, 브랜드 전체 흐름을 직접 경험할 수 있나요?</div>
+            <div class="text-[15px] text-sub leading-relaxed">→ <span id="brandConnectionText"></span></div>
+          </div>
+        </div>
+      </details>
 
       <!-- RESUME CUSTOM GUIDE -->
       <div id="resumeGuideCard" class="card-guide rounded-xl p-5 mb-4">
@@ -1394,42 +1404,49 @@ function resolveVerdict(item){
 
 let currentJdResult = null;
 
-function showJdResult(result, fromHistory=false){
-  document.getElementById('jdInputArea').classList.add('hidden');
-  document.getElementById('jdResult').classList.remove('hidden');
-  document.getElementById('jdHeader').classList.add('hidden');
-  currentJdResult = result;
+// 한글 받침 유무 → 조사 선택 (자연스러운 결론 문장용)
+function hasJong(s){ if (!s) return false; const c = s.charCodeAt(s.length - 1); if (c < 0xAC00 || c > 0xD7A3) return false; return (c - 0xAC00) % 28 !== 0; }
+function josaEunNeun(s){ return hasJong(s) ? '은' : '는'; }
+function josaIGa(s){ return hasJong(s) ? '이' : '가'; }
+const critShort = c => (c.label || '').replace(/\s*적합$/, '');
 
-  // 새 기준으로 재분석 버튼 — 원본 텍스트(jd_text)가 저장된 항목에서만 노출
-  const reBtn = document.getElementById('reanalyzeBtn');
-  reBtn.classList.toggle('hidden', !result.jd_text);
-  reBtn.disabled = false;
-  reBtn.textContent = '↻ 새 기준으로 재분석';
-  reBtn.onclick = () => reanalyzeItem(result);
+// "왜 이 판정인지" 일상어 한 문장 — 있는 데이터만으로 (새 AI 호출 없음)
+function buildConclusion(result, verdict, sorted, reqObj){
+  const reqMismatch = reqObj && reqObj.level === 'mismatch';
+  const strong = sorted.filter(c => critScore(c) >= 70).map(critShort).filter(Boolean);
+  const weak = sorted.filter(c => critScore(c) < 60).map(critShort).filter(Boolean);
+  const strongTxt = strong.join('·');
+  const weakTxt = weak.join('·');
 
-  const verdict = resolveVerdict(result);
-  const meta = verdictMeta(verdict);
+  if (verdict === '지원 추천') {
+    return (strongTxt ? `${strongTxt}${josaIGa(strongTxt)} 잘 맞아 지원할 만해요.` : '전반적으로 잘 맞아 지원할 만해요.')
+      + (reqMismatch ? ' 다만 필수 요건은 한 번 확인해보세요.' : '');
+  }
+  if (verdict === '검토 필요') {
+    if (strongTxt && (weakTxt || reqMismatch)) {
+      const concern = reqMismatch ? '필수 요건' : `${weakTxt} 쪽`;
+      return `${strongTxt}${josaEunNeun(strongTxt)} 잘 맞지만, ${concern}은 확인이 필요해요.`;
+    }
+    if (strongTxt) return `${strongTxt}${josaEunNeun(strongTxt)} 잘 맞지만, 몇 가지 확인이 필요해요.`;
+    return '일부는 맞지만 확인이 필요한 부분이 있어요.';
+  }
+  // 패스
+  if (reqMismatch) return `필수 요건(${reqObj.note || '미충족 항목'})을 충족하기 어려워 지금은 거리가 있어요.`;
+  if (weakTxt) return `${weakTxt} 쪽이 약해 지금은 잘 맞지 않아요.${strongTxt ? ` (${strongTxt}${josaEunNeun(strongTxt)} 강점)` : ''}`;
+  return '지금은 잘 맞지 않는 공고예요.';
+}
 
-  // ---- FIT SUMMARY: score + verdict pill + company + risk ----
-  const label = document.getElementById('verdictLabel');
-  const company = document.getElementById('verdictCompany');
-  const missing = document.getElementById('verdictMissing');
-
+// 메인 요약 카드 — 회사·판정·결론·강점·걸리는점을 이미 분석된 데이터에서 압축 (새 AI 호출 없음)
+function fillQuickSummary(result, verdict){
+  const crit = result.criteria || [];
   const score = fitScore(result);
-  const scoreEl = document.getElementById('fitScoreBig');
-  scoreEl.textContent = score;
-  scoreEl.style.color = verdict === '지원 추천' ? '#2FA866' : verdict === '검토 필요' ? '#E3B948' : '#A49C8C';
+  const vColor = verdict === '지원 추천' ? '#2FA866' : verdict === '검토 필요' ? '#E3B948' : '#A49C8C';
+  const sorted = crit.slice().sort((a, b) => critScore(b) - critScore(a));
+  const reqObj = result.requirement
+    || (result.cosmetics ? { level: result.cosmetics.level === 'required' ? 'mismatch' : 'ok', note: result.cosmetics.note || '' } : null);
 
-  label.className = 'pill ' + meta.pill;
-  label.textContent = `${meta.icon} ${verdict}`;
-
-  // 미적합 2개 이상 → 지원 비추천 태그
-  document.getElementById('notRecTag').classList.toggle('hidden', !((result.criteria || []).length && notRecommended(result.criteria)));
-
-  // 근거 한 줄 (예: 직무 78 · 성장 55 · 환경 40)
-  document.getElementById('fitRationale').textContent =
-    (result.criteria || []).map(c => `${c.label.replace(/\s*적합$/, '')} ${critScore(c)}`).join(' · ');
-
+  // 회사 · 포지션 (클릭해서 수정 → 히스토리 반영)
+  const company = document.getElementById('qsCompany');
   company.textContent = [result.company, result.position].filter(Boolean).join(' · ');
   company.setAttribute('contenteditable', 'true');
   company.setAttribute('title', '클릭해서 회사명/포지션 수정 (히스토리에도 반영됩니다)');
@@ -1448,23 +1465,71 @@ function showJdResult(result, fromHistory=false){
     if (e.key === 'Escape') { company.blur(); }
   };
 
-  const crit = result.criteria || [];
-  const miss = crit.filter(c => !critFull(c)).map(c => c.label);
-  if (verdict === '검토 필요' && miss.length) {
-    missing.innerHTML = '보완 필요 — ' + miss.map(m => `<b>${escapeHtml(m)}</b>`).join(' · ');
-    missing.classList.remove('hidden');
+  // 점수 · 판정 (+ 지원 비추천 태그)
+  document.getElementById('qsVerdict').innerHTML =
+    `<span style="color:${vColor}">${score}점</span> · ${escapeHtml(verdict)}`;
+  document.getElementById('qsNotRec').classList.toggle('hidden', !(crit.length && notRecommended(crit)));
+
+  // 한 문장 결론
+  document.getElementById('qsConclusion').textContent = buildConclusion(result, verdict, sorted, reqObj);
+
+  // 강점 (가장 점수 높은 기준, 60점 이상일 때만)
+  const strengthRow = document.getElementById('qsStrengthRow');
+  const top = sorted[0];
+  if (top && critScore(top) >= 60) {
+    const note = (top.note || '').trim();
+    document.getElementById('qsStrength').innerHTML =
+      `<b>${escapeHtml(top.label)}</b> ${critScore(top)}점${note ? ' — ' + escapeHtml(note) : ''}`;
+    strengthRow.classList.remove('hidden');
   } else {
-    missing.classList.add('hidden');
+    strengthRow.classList.add('hidden');
   }
 
-  // 리스크 한 줄 (AI risk 우선, 없으면 미충족/갭에서 도출)
-  let risk = (result.risk || '').trim();
-  if (!risk) {
-    risk = miss.length ? ('보완 필요 — ' + miss.join(', '))
-      : (result.gaps && result.gaps[0] && result.gaps[0].gap) ? result.gaps[0].gap
-      : '특별한 리스크는 낮습니다';
+  // 걸리는 점: ① 필수 미충족 ② 가장 약한 기준(<60) ③ 일반 리스크
+  const riskRow = document.getElementById('qsRiskRow');
+  let riskHtml = '';
+  if (reqObj && reqObj.level === 'mismatch') {
+    riskHtml = `<b>필수 요건 미충족</b>${reqObj.note ? ' — ' + escapeHtml(reqObj.note) : ''}`;
+  } else {
+    const low = sorted[sorted.length - 1];
+    if (low && critScore(low) < 60) {
+      const note = (low.note || '').trim();
+      riskHtml = `<b>${escapeHtml(low.label)}</b> ${critScore(low)}점${note ? ' — ' + escapeHtml(note) : ''}`;
+    } else if ((result.risk || '').trim()) {
+      riskHtml = escapeHtml(result.risk.trim());
+    }
   }
-  document.getElementById('fitRisk').textContent = risk;
+  if (riskHtml) {
+    document.getElementById('qsRisk').innerHTML = riskHtml;
+    riskRow.classList.remove('hidden');
+  } else {
+    riskRow.classList.add('hidden');
+  }
+}
+
+function showJdResult(result, fromHistory=false){
+  document.getElementById('jdInputArea').classList.add('hidden');
+  document.getElementById('jdResult').classList.remove('hidden');
+  document.getElementById('jdHeader').classList.add('hidden');
+  currentJdResult = result;
+
+  // 새 기준으로 재분석 버튼 — 원본 텍스트(jd_text)가 저장된 항목에서만 노출
+  const reBtn = document.getElementById('reanalyzeBtn');
+  reBtn.classList.toggle('hidden', !result.jd_text);
+  reBtn.disabled = false;
+  reBtn.textContent = '↻ 새 기준으로 재분석';
+  reBtn.onclick = () => reanalyzeItem(result);
+
+  const verdict = resolveVerdict(result);
+
+  // 새 결과는 항상 요약부터 — 상세는 접힌 상태로 초기화
+  const det = document.getElementById('jdDetails');
+  if (det) det.open = false;
+
+  // ---- 메인 요약 카드 (점수·판정·회사·결론·강점·걸리는점, 새 호출 없이 기존 데이터 압축) ----
+  fillQuickSummary(result, verdict);
+
+  const crit = result.criteria || [];
 
   // ---- 1st-pass requirement filter flag (CONFIG.requirementFilter, 산업 중립) ----
   const reqFlag = document.getElementById('requirementFlag');
