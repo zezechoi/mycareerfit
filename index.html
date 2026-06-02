@@ -834,7 +834,30 @@ function showKeyOverlay(errMsg){
 function hideKeyOverlay(){
   document.getElementById('apiKeyOverlay').classList.add('hidden');
 }
-document.getElementById('apiKeySave').addEventListener('click', () => {
+
+// 입력 시점 키 검증 — 그 키로 최소 토큰 테스트 호출 후 유효성만 판별.
+// 반환: 'valid'(200/429/크레딧 — 인증된 키) / 'invalid'(401/403) / 'unknown'(네트워크·5xx)
+// ⚠️ 키는 헤더로만 전달, 절대 로깅하지 않음.
+async function validateKey(key){
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-anthropic-key': key },
+      body: JSON.stringify({ model: MODEL, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
+    });
+    if (res.status === 401 || res.status === 403) return 'invalid';
+    if (res.ok || res.status === 429) return 'valid';
+    // 400 등: 크레딧 부족이면 키 자체는 유효 → valid, 그 외는 unknown
+    const j = await res.json().catch(() => ({}));
+    if (/credit|billing|quota|insufficient/i.test(j?.error?.message || '')) return 'valid';
+    return 'unknown';
+  } catch {
+    return 'unknown';   // 네트워크 오류 등 — 키 탓이라 단정하지 않음
+  }
+}
+
+document.getElementById('apiKeySave').addEventListener('click', async () => {
+  const btn = document.getElementById('apiKeySave');
   const v = document.getElementById('apiKeyInput').value.trim();
   const err = document.getElementById('apiKeyError');
   if (!v) {
@@ -848,6 +871,26 @@ document.getElementById('apiKeySave').addEventListener('click', () => {
     return;
   }
   err.classList.add('hidden');
+  // 입력 시점 검증 — 유효한 키만 통과시킨다
+  btn.disabled = true;
+  const origLabel = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span> 확인 중...';
+  let result;
+  try { result = await validateKey(v); } finally {
+    btn.disabled = false;
+    btn.textContent = origLabel;
+  }
+  if (result === 'invalid') {
+    err.textContent = '키가 올바르지 않아요. console.anthropic.com에서 확인해 다시 입력해주세요.';
+    err.classList.remove('hidden');
+    return;
+  }
+  if (result === 'unknown') {
+    err.textContent = '지금 키 확인이 안 돼요. 잠시 후 다시 시도해주세요. (네트워크 상태를 확인해보세요)';
+    err.classList.remove('hidden');
+    return;
+  }
+  // valid → 저장하고 진입
   state.apiKey = v;
   localStorage.setItem(STORE.KEY, v);
   hideKeyOverlay();
