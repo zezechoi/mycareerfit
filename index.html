@@ -1304,20 +1304,24 @@ function renderResumeFilesList(){
 
 async function addResumeLink(url){
   const status = document.getElementById('resumeLinkStatus');
-  status.classList.remove('hidden');
+  status.classList.remove('hidden', 'text-point');
   status.textContent = `${url} 가져오는 중...`;
   try {
     const data = await fetchUrl(url);
     const text = (data?.text || '').trim();
-    if (!text) throw new Error('빈 응답');
+    // 빈/너무 짧은 추출 = 사실상 실패(로그인 페이지·JS 렌더링 등) → 추가하지 않음(빈 분석 방지)
+    if (text.length < 50) throw new Error('NO_CONTENT');
     state.resumeLinks.push({ url, text });
     status.textContent = `✓ 추가됨 (${text.length.toLocaleString()}자)`;
     document.getElementById('resumeLinkInput').value = '';
     renderResumeLinksList();
     renderSourcesSummary();
   } catch (err) {
-    console.error(err);
-    status.textContent = '실패: ' + err.message;
+    if (err.message === 'INVALID_KEY') return;  // 키 오류는 오버레이가 처리
+    // 기술 에러(리다이렉트·타임아웃·HTTP·추출 실패 등)는 노출하지 않고 사람 친화 안내로 대체.
+    // (탭을 자동 전환하면 이 안내가 가려지므로, 안내는 링크 화면에 남기고 어느 탭으로 갈지 알려준다)
+    status.classList.add('text-point');
+    status.innerHTML = '이 링크는 내용을 가져올 수 없어요. <span class="text-sub">(노션·피그마·구글독스 등은 외부에서 못 읽어요)</span><br>위의 <b>‘텍스트’ 탭</b>에 내용을 붙여넣거나 <b>‘파일’ 탭</b>에 올려주세요.';
   }
 }
 
