@@ -1458,7 +1458,17 @@ function verdictMeta(verdict){
   return { v:'패스', band:'verdict-gray', pill:'hist-pill-gray', icon:'✕' };
 }
 
+// 공고에 '명시된 필수 자격요건'을 프로필이 못 채웠는가 (신규 requirement + 레거시 cosmetics 호환)
+function isRequirementMismatch(item){
+  if (!item || !CONFIG.requirementFilter.enabled) return false;
+  if (item.requirement && item.requirement.level) return item.requirement.level === 'mismatch';
+  if (item.cosmetics && item.cosmetics.level) return item.cosmetics.level === 'required';
+  return false;
+}
+
 function resolveVerdict(item){
+  // 필수 자격요건 미충족이면, 점수와 무관하게 '패스'로 거른다 ("그래도 지원"은 별도 경로로 가능)
+  if (isRequirementMismatch(item)) return '패스';
   if (item.criteria && item.criteria.length) return computeVerdict(item.criteria);
   return verdictMeta(item.verdict || '').v;
 }
@@ -2237,9 +2247,12 @@ function normStatus(s){
 // FIT 점수 = 기준별 점수 합(적합25/부분13/미적합0) → 0~100. 옛 기록은 판정으로 추정.
 function fitScore(item){
   const crit = item.criteria || [];
-  if (crit.length) return fitScoreFromCrit(crit);
-  const v = resolveVerdict(item);
-  return v === '지원 추천' ? 90 : v === '검토 필요' ? 67 : 40;
+  let s;
+  if (crit.length) s = fitScoreFromCrit(crit);
+  else { const v = resolveVerdict(item); s = v === '지원 추천' ? 90 : v === '검토 필요' ? 67 : 40; }
+  // 필수 자격요건 미충족이면 점수 상한 59 (높은 점수가 추천처럼 보이지 않게)
+  if (isRequirementMismatch(item)) s = Math.min(s, 59);
+  return s;
 }
 
 function setHistoryFilter(f){
